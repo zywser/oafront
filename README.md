@@ -1,7 +1,7 @@
 <<<<<<< HEAD
-# oafront —— OA 办公系统前端
+# 沐光 OA —— 基于大模型的智能 OA 办公平台前端
 
-基于 **Vue3 + Vite5 + Element Plus** 的企业 OA 办公系统前端，对接后端 `OAback`（Django + DRF）。包含登录、首页统计、员工管理、通知、请假、AI 智能助手（RAG 知识问答）等模块。
+基于 **Vue3 + Vite5 + Element Plus** 的企业智能 OA 办公系统前端，对接后端 `OAback`（Django + DRF）。包含登录、首页统计、员工管理、通知、请假、AI 智能助手（RAG 知识问答）等模块。
 
 ---
 

@@ -1,4 +1,4 @@
-<script name="frame" setup>
+﻿<script name="frame" setup>
 import { ref, computed, reactive, onMounted, watch } from 'vue';
 
 
@@ -183,10 +183,10 @@ onMounted(() => {
 <div>
   <el-container class="container">
     <el-aside :width="asideWidth" class="aside">
-      <router-link to="/" class="brand"><strong>知了</strong><span v-show="!isCollapse">OA系统</span></router-link>
+      <router-link to="/" class="brand"><strong>沐光</strong><span v-show="!isCollapse">OA系统</span></router-link>
 
-      <el-menu active-text-color="#ffd04b" background-color="#343a40" class="el-menu-vertical-demo"
-        :default-active="defaultactive" :default-openeds="defaultOpeneds" text-color="#fff" :collapse="isCollapse"
+      <el-menu active-text-color="#4ECDC4" background-color="#1F3A3D" class="el-menu-vertical-demo"
+        :default-active="defaultactive" :default-openeds="defaultOpeneds" text-color="#E0F2F1" :collapse="isCollapse"
         :collapse-transition="false" @close="handleClose" :router="true">
 
 
@@ -284,22 +284,22 @@ onMounted(() => {
 
 <style scoped>
 .aside {
-  background-color: #343a40;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 25), 0 10px 10px rgba(0, 0, 0, 22);
+  background-color: #1F3A3D;
+  box-shadow: 0 14px 28px rgba(31, 58, 61, 0.25), 0 10px 10px rgba(31, 58, 61, 0.22);
 
 }
 
 .container {
   height: 100vh;
-  background-color: #f4f6f9;
+  background-color: #f4f9f9;
 }
 
 .aside .brand {
 
   color: white;
   text-decoration: none;
-  border-bottom: 1px solid #434a50;
-  background-color: #232631;
+  border-bottom: 1px solid #2C5054;
+  background: linear-gradient(135deg, #172E31 0%, #1F3A3D 100%);
   height: 60px;
   display: flex;
   justify-content: center;
@@ -328,3 +328,4 @@ onMounted(() => {
   border-right: none;
 }
 </style>
+

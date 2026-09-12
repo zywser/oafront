@@ -1,0 +1,64 @@
+/* 沐光OA 全局主题色 - 薄荷青+天蓝 清新风 */
+:root {
+  /* 主色系 - 贴合LOGO薄荷绿→天蓝渐变 */
+  --el-color-primary: #4ECDC4;
+  --el-color-primary-light-3: #7EDDD6;
+  --el-color-primary-light-5: #A5E8E3;
+  --el-color-primary-light-7: #CCF2F0;
+  --el-color-primary-light-8: #DFF7F6;
+  --el-color-primary-light-9: #F0FBFA;
+  --el-color-primary-dark-2: #3DB5AD;
+
+  /* 侧边栏深色系 - 深青灰 */
+  --sidebar-bg: #1F3A3D;
+  --sidebar-brand-bg: #172E31;
+  --sidebar-hover: #2C5054;
+  --sidebar-active: #4ECDC4;
+
+  /* 辅助渐变 */
+  --gradient-start: #4ECDC4;
+  --gradient-end: #45B7D1;
+}
+
+/* 覆盖 Element Plus 主色按钮 */
+.el-button--primary {
+  --el-button-bg-color: var(--el-color-primary);
+  --el-button-border-color: var(--el-color-primary);
+  --el-button-hover-bg-color: var(--el-color-primary-light-3);
+  --el-button-hover-border-color: var(--el-color-primary-light-3);
+  --el-button-active-bg-color: var(--el-color-primary-dark-2);
+  --el-button-active-border-color: var(--el-color-primary-dark-2);
+}
+
+/* 覆盖 Element Plus 菜单激活色 */
+.el-menu-item.is-active {
+  color: var(--el-color-primary) !important;
+}
+
+/* 输入框聚焦边框 */
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset !important;
+}
+
+/* 链接颜色 */
+.el-link--primary {
+  --el-link-text-color: var(--el-color-primary);
+}
+
+/* 标签页激活色 */
+.el-tabs__item.is-active {
+  color: var(--el-color-primary);
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
