@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # oafront —— OA 办公系统前端
 
 基于 **Vue3 + Vite5 + Element Plus** 的企业 OA 办公系统前端，对接后端 `OAback`（Django + DRF）。包含登录、首页统计、员工管理、通知、请假、AI 智能助手（RAG 知识问答）等模块。
@@ -217,3 +218,7 @@ askStream(data, handlers = {})
 | 联网问答报"网络错误" | 后端是否已重启（`.env` 改动需重启）；`TAVILY_API_KEY` 是否已配置；前端 60s 超时是否足够 |
 | 引用弹窗最后一张卡片被裁切 | 弹窗内容区已设 `max-height: 74vh; overflow-y: auto`，超高内部滚动 |
 | 表格出现横向滚动条 | 已调整列宽（非固定列合计 < 容器宽），如再出现说明面板更窄，需继续收窄列宽 |
+=======
+# oafront
+oafront前端项目代码
+>>>>>>> 7aeb4dfb9f921a42b1f2fdb4fae2ff277916ba5c
