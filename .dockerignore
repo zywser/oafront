@@ -1,0 +1,18 @@
+# ===== 构建产物 / 依赖（多阶段构建会重新生成）=====
+node_modules/
+dist/
+
+# ===== git / IDE =====
+.git/
+.gitignore
+.vscode/
+.agents/
+
+# ===== 文档 / 杂项 =====
+*.md
+
+# ===== docker 自身 =====
+.dockerignore
+Dockerfile
+
+# 注意：.env.production 必须保留（构建时注入 VITE_BASE_URL）
