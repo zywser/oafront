@@ -175,6 +175,20 @@ const stripHtml = (value) => {
   return (container.innerText || container.textContent || "").trim() || "-";
 };
 
+// 展开预览：去掉 markdown 符号（引用 >、标题 #、粗斜体 * _ ~ `）后压平空白，避免原文符号造成排版混乱
+const cleanPreview = (value) => {
+  const text = stripHtml(value);
+  if (text === "-") {
+    return "暂无预览";
+  }
+  return String(text)
+    .replace(/^\s*>\s?/gm, "")
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/[*_~`]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
 const formatCitationExcerpt = (value) => {
   return stripHtml(value);
 };
@@ -876,7 +890,6 @@ onMounted(refreshAll);
             :data="sources"
             height="430"
             row-key="id"
-            :default-expand-all="true"
             v-loading="loading.sources"
             @selection-change="selectedSourceRows = $event"
           >
@@ -884,28 +897,25 @@ onMounted(refreshAll);
             <el-table-column type="expand" width="40">
               <template #default="scope">
                 <div class="source-expand">
-                  <p>{{ scope.row.content_preview || scope.row.summary || "暂无预览" }}</p>
-                  <span>类型：{{ sourceTypeText(scope.row.source_type, scope.row.source_type_label) }} · 片段：{{ scope.row.chunk_count || 0 }} · 可见范围：{{ visibilityText(scope.row) }}</span>
+                  <p>{{ cleanPreview(scope.row.content_preview || scope.row.summary) }}</p>
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="标题" min-width="132" show-overflow-tooltip>
+            <el-table-column label="标题" min-width="180" show-overflow-tooltip>
               <template #default="scope">
                 <div class="source-title">
-                  <el-icon><Document /></el-icon>
-                  <span>{{ scope.row.title }}</span>
+                  <span class="source-title-text">{{ scope.row.title }}</span>
+                  <span class="source-meta">
+                    类型：{{ sourceTypeText(scope.row.source_type, scope.row.source_type_label) }} · 片段：{{ scope.row.chunk_count || 0 }} · 可见范围：{{ visibilityText(scope.row) }}
+                  </span>
                 </div>
               </template>
-            </el-table-column>
-            <el-table-column label="类型" width="56">
-              <template #default="scope">{{ sourceTypeText(scope.row.source_type, scope.row.source_type_label) }}</template>
             </el-table-column>
             <el-table-column label="状态" width="72">
               <template #default="scope">
                 <el-tag :type="statusType(scope.row.status)">{{ statusText(scope.row.status, scope.row.status_label) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="片段" prop="chunk_count" width="64" align="center" />
             <el-table-column label="操作" width="128" fixed="right">
               <template #default="scope">
                 <el-button :icon="RefreshRight" text @click="reindexSource(scope.row)">重建</el-button>
@@ -1687,17 +1697,12 @@ onMounted(refreshAll);
 
 .source-title {
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
 }
 
-.source-title .el-icon {
-  flex: none;
-  margin-top: 3px;
-}
-
-.source-title span {
+.source-title-text {
   min-width: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -1705,6 +1710,18 @@ onMounted(refreshAll);
   overflow: hidden;
   word-break: break-all;
   line-height: 1.5;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.source-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #909399;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .source-expand {
@@ -1716,18 +1733,11 @@ onMounted(refreshAll);
 .source-expand p {
   margin: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
   white-space: pre-wrap;
   word-break: break-word;
-}
-
-.source-expand span {
-  display: block;
-  margin-top: 8px;
-  color: #909399;
-  font-size: 12px;
 }
 
 .source-footer {
