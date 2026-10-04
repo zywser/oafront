@@ -50,8 +50,10 @@ const editorConfig = {
             // form-data fieldName ，默认值 'wangeditor-uploaded-image'，就是后端校验图片的字段名
             fieldName: "image",
 
-            // 单个文件的最大体积限制，默认为 2M
-            maxFileSize: 2 * 1024 * 1024,
+            // 单个文件的最大体积限制，默认为 2M。
+            // 注意：这里放宽到 20M，实际 10MB 限制由下方 customUpload 与后端共同把关，
+            // 否则 wangEditor 前端拦截大图时只在控制台打印，用户看不到提示。
+            maxFileSize: 20 * 1024 * 1024,
 
             // 最多可上传几个文件，默认为 100
             maxNumberOfFiles: 10,
@@ -64,26 +66,43 @@ const editorConfig = {
                 Authorization: "JWT " + authStore.token
 
             },
-            timeout: 5 * 1000, // 5 秒
+            timeout: 15 * 1000, // 15 秒（大图上传适当放宽）
 
-            // 自定义插入图片
-            customInsert(res, insertFn) {
-                if(res.errno == 0){
-                     // res 即服务端的返回结果
-                let data = res.data
-                let url = import.meta.env.VITE_BASE_URL + data.url
-                let href = import.meta.env.VITE_BASE_URL + data.href
-                let alt = data.alt
+            // 完全接管上传：前端先按 10MB 提示，再把请求发给后端；
+            // 后端返回 errno!=0 时同样弹出 message（如“图片不能超过10MB！”）
+            customUpload(file, insertFn) {
+                const IMAGE_MAX_SIZE = 10 * 1024 * 1024
+                if (file.size > IMAGE_MAX_SIZE) {
+                    ElMessage.error("图片不能超过10MB！")
+                    return
+                }
 
-                // 从 res 中找到 url alt href ，然后插入图片
-                insertFn(url, alt, href)
-                }else{
-                    ElMessage.error(res.message)
-                }           
-               
+                const formData = new FormData()
+                formData.append("image", file)
+
+                // VITE_BASE_URL 形如 http://127.0.0.1:8000/api，媒体文件属于后端根路径（不含 /api），
+                // 若直接用 VITE_BASE_URL 拼接会得到 /api/media/... 404
+                const origin = (import.meta.env.VITE_BASE_URL || "").replace(/\/api\/?$/, "")
+
+                fetch(import.meta.env.VITE_BASE_URL + "/image/upload", {
+                    method: "POST",
+                    headers: {
+                        Authorization: "JWT " + authStore.token,
+                    },
+                    body: formData,
+                })
+                    .then((res) => res.json())
+                    .then((data) => {
+                        if (data.errno === 0) {
+                            insertFn(origin + data.data.url, data.data.alt, origin + data.data.href)
+                        } else {
+                            ElMessage.error(data.message || "图片上传失败")
+                        }
+                    })
+                    .catch(() => {
+                        ElMessage.error("图片上传失败，请重试")
+                    })
             },
-            
-        
 
 
 

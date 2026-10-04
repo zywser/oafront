@@ -32,6 +32,8 @@ const question = ref("");
 const uploadVisible = ref(false);
 const citationDialogVisible = ref(false);
 const activeCitationMessage = ref(null);
+const sourceDetailVisible = ref(false);
+const activeSourceDetail = ref(null);
 const uploadFormRef = ref();
 const uploadFileRef = ref();
 const chatBodyRef = ref();
@@ -83,6 +85,13 @@ const sourceTypeMap = {
   upload: "上传",
   manual: "手动",
   faq: "FAQ",
+};
+
+const sourceTypeTag = {
+  inform: "primary",
+  upload: "success",
+  manual: "warning",
+  faq: "info",
 };
 
 const statusMap = {
@@ -285,6 +294,43 @@ const citationMetaText = (source) => {
 const openCitationDialog = (message) => {
   activeCitationMessage.value = message;
   citationDialogVisible.value = true;
+};
+
+// 点击知识源标题 → 模态框展示完整内容
+const openSourceDetail = (row) => {
+  activeSourceDetail.value = row;
+  sourceDetailVisible.value = true;
+};
+
+// 富文本白名单渲染：仅保留基础排版与图片，剔除脚本/事件属性，图片 src 仅允许 http(s) 或站内相对路径
+const sanitizeRichContent = (value) => {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return "<p>暂无内容</p>";
+  }
+  // 纯文本（不含标签）→ 转义后输出，交给 white-space: pre-wrap 排版
+  if (!/<[a-zA-Z!\/]/.test(raw)) {
+    return escapeHtml(raw);
+  }
+  // 1. 删除危险标签及其内容
+  let html = raw
+    .replace(/<\s*(script|style|iframe|object|embed|link|meta|form|input|button|textarea|select)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
+    .replace(/<\s*(script|iframe|object|embed|link|meta|form|input|button|textarea|select)[^>]*>/gi, "");
+  // 2. 删除所有 on* 事件属性
+  html = html.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  // 3. 清除 javascript:/data:/vbscript: 等危险协议的 src/href
+  html = html.replace(/\s+(href|src)\s*=\s*(["\'])\s*(?:javascript|data|vbscript):/gi, " $1=$2$2");
+  // 4. img 仅保留合法 src，重建安全标签
+  html = html.replace(/<img[^>]*>/gi, (tag) => {
+    const srcMatch = tag.match(/\ssrc\s*=\s*["']([^"']+)["']/i);
+    const src = srcMatch?.[1] || "";
+    if (!(/^(https?:)?\/\//i.test(src) || src.startsWith("/"))) {
+      return "";
+    }
+    const alt = (tag.match(/\salt\s*=\s*["']([^"']*)["']/i) || [])[1] || "";
+    return `<img src="${src}" alt="${escapeHtml(alt)}" />`;
+  });
+  return html;
 };
 
 const toggleSourceSelection = (checked) => {
@@ -870,59 +916,53 @@ onMounted(refreshAll);
           </template>
 
           <div class="source-filters">
-            <el-input v-model="sourceFilters.search" :prefix-icon="Search" clearable placeholder="搜索知识" @keyup.enter="loadSources" />
-            <el-select v-model="sourceFilters.source_type" clearable placeholder="类型">
-              <el-option label="通知" value="inform" />
-              <el-option label="上传" value="upload" />
-              <el-option label="手动" value="manual" />
-              <el-option label="FAQ" value="faq" />
-            </el-select>
-            <el-select v-model="sourceFilters.status" clearable placeholder="状态">
-              <el-option label="待索引" value="pending" />
-              <el-option label="已索引" value="indexed" />
-              <el-option label="失败" value="failed" />
-            </el-select>
-            <el-button :icon="Search" @click="loadSources" />
-            <el-button @click="resetSourceFilters">重置</el-button>
+            <div class="source-filter-row">
+              <el-input v-model="sourceFilters.search" :prefix-icon="Search" clearable placeholder="搜索知识" @keyup.enter="loadSources" />
+              <el-button :icon="Search" @click="loadSources" />
+              <el-button @click="resetSourceFilters">重置</el-button>
+            </div>
+            <div class="source-filter-row">
+              <el-select v-model="sourceFilters.source_type" clearable placeholder="类型">
+                <el-option label="通知" value="inform" />
+                <el-option label="上传" value="upload" />
+                <el-option label="手动" value="manual" />
+                <el-option label="FAQ" value="faq" />
+              </el-select>
+              <el-select v-model="sourceFilters.status" clearable placeholder="状态">
+                <el-option label="待索引" value="pending" />
+                <el-option label="已索引" value="indexed" />
+                <el-option label="失败" value="failed" />
+              </el-select>
+            </div>
           </div>
 
-          <el-table
-            :data="sources"
-            height="430"
-            row-key="id"
-            v-loading="loading.sources"
-            @selection-change="selectedSourceRows = $event"
-          >
-            <el-table-column type="selection" width="40" />
-            <el-table-column type="expand" width="40">
-              <template #default="scope">
-                <div class="source-expand">
-                  <p>{{ cleanPreview(scope.row.content_preview || scope.row.summary) }}</p>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column label="标题" min-width="180" show-overflow-tooltip>
-              <template #default="scope">
-                <div class="source-title">
-                  <span class="source-title-text">{{ scope.row.title }}</span>
-                  <span class="source-meta">
-                    类型：{{ sourceTypeText(scope.row.source_type, scope.row.source_type_label) }} · 片段：{{ scope.row.chunk_count || 0 }} · 可见范围：{{ visibilityText(scope.row) }}
-                  </span>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="72">
-              <template #default="scope">
-                <el-tag :type="statusType(scope.row.status)">{{ statusText(scope.row.status, scope.row.status_label) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="128" fixed="right">
-              <template #default="scope">
-                <el-button :icon="RefreshRight" text @click="reindexSource(scope.row)">重建</el-button>
-                <el-button :icon="Delete" type="danger" text @click="deleteSource(scope.row)" />
-              </template>
-            </el-table-column>
-          </el-table>
+          <div class="source-table-wrap" v-loading="loading.sources">
+            <el-table
+              :data="sources"
+              height="100%"
+              @selection-change="selectedSourceRows = $event"
+            >
+              <el-table-column type="selection" width="40" />
+              <el-table-column label="标题" min-width="160">
+                <template #default="scope">
+                  <div class="source-title" @click="openSourceDetail(scope.row)">
+                    <span class="source-title-text">{{ scope.row.title }}</span>
+                    <span class="source-meta">
+                      <el-tag size="small" :type="sourceTypeTag[scope.row.source_type] || 'info'">{{ sourceTypeText(scope.row.source_type, scope.row.source_type_label) }}</el-tag>
+                      <el-tag size="small" :type="statusType(scope.row.status)">{{ statusText(scope.row.status, scope.row.status_label) }}</el-tag>
+                      <span class="source-meta-text">片段 {{ scope.row.chunk_count || 0 }} · {{ visibilityText(scope.row) }}</span>
+                    </span>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="96">
+                <template #default="scope">
+                  <el-button :icon="RefreshRight" text @click.stop="reindexSource(scope.row)">重建</el-button>
+                  <el-button :icon="Delete" type="danger" text @click.stop="deleteSource(scope.row)" />
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
 
           <template #footer>
             <div class="source-footer">
@@ -985,6 +1025,36 @@ onMounted(refreshAll);
         <el-button @click="uploadVisible = false">取消</el-button>
         <el-button type="primary" :loading="loading.uploading" @click="submitUpload">提交</el-button>
       </template>
+  </el-dialog>
+
+  <el-dialog
+    v-model="sourceDetailVisible"
+    :title="activeSourceDetail?.title || '知识详情'"
+    width="720px"
+    class="source-detail-dialog"
+    @closed="activeSourceDetail = null"
+  >
+    <div v-if="activeSourceDetail" class="source-detail">
+      <div class="source-detail-meta">
+        <el-tag size="small" :type="sourceTypeTag[activeSourceDetail.source_type] || 'info'">{{ sourceTypeText(activeSourceDetail.source_type, activeSourceDetail.source_type_label) }}</el-tag>
+        <el-tag size="small" :type="statusType(activeSourceDetail.status)">{{ statusText(activeSourceDetail.status, activeSourceDetail.status_label) }}</el-tag>
+        <span>片段：{{ activeSourceDetail.chunk_count || 0 }}</span>
+        <span v-if="activeSourceDetail.created_at">创建：{{ formatDateTime(activeSourceDetail.created_at) }}</span>
+        <span>可见范围：{{ visibilityText(activeSourceDetail) }}</span>
+      </div>
+      <div class="source-detail-content" v-html="sanitizeRichContent(activeSourceDetail.content || activeSourceDetail.summary)"></div>
+    </div>
+    <template #footer>
+      <el-button @click="sourceDetailVisible = false">关闭</el-button>
+      <el-button
+        type="primary"
+        :icon="RefreshRight"
+        :loading="loading.reindexing"
+        @click="reindexSource(activeSourceDetail); sourceDetailVisible = false"
+      >
+        重建
+      </el-button>
+    </template>
   </el-dialog>
 
   <el-dialog
@@ -1689,10 +1759,61 @@ onMounted(refreshAll);
 }
 
 .source-filters {
-  display: grid;
-  grid-template-columns: minmax(150px, 1fr) 92px 92px 36px 56px;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-bottom: 12px;
+  min-width: 0;
+}
+
+.source-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.source-filter-row .el-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.source-filter-row .el-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.source-list {
+  min-width: 0;
+}
+
+/* 面板 body 弹性布局：过滤器固定，表格区填满剩余高度，避免多余滚动条 */
+.source-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.source-panel :deep(.el-card__body) {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.source-panel :deep(.el-card__footer) {
+  flex: none;
+}
+
+.source-table-wrap {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.source-table-wrap :deep(.el-table__body-wrapper) {
+  scrollbar-width: thin;
 }
 
 .source-title {
@@ -1700,6 +1821,12 @@ onMounted(refreshAll);
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.source-title:hover .source-title-text {
+  color: #2563eb;
 }
 
 .source-title-text {
@@ -1712,32 +1839,69 @@ onMounted(refreshAll);
   line-height: 1.5;
   color: #1f2937;
   font-weight: 600;
+  transition: color 0.15s ease;
 }
 
 .source-meta {
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: #909399;
   font-size: 12px;
   line-height: 1.4;
 }
 
-.source-expand {
-  padding: 10px 28px;
-  color: #606266;
-  line-height: 1.7;
+.source-meta .el-tag {
+  flex: none;
 }
 
-.source-expand p {
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
+.source-meta-text {
+  min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-detail-dialog :deep(.el-dialog__body) {
+  padding-top: 12px;
+  padding-bottom: 8px;
+}
+
+.source-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #909399;
+  font-size: 12px;
+}
+
+.source-detail-content {
+  margin-top: 12px;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.8;
   white-space: pre-wrap;
   word-break: break-word;
+  max-height: 56vh;
+  overflow-y: auto;
+  padding: 2px 4px;
+}
+
+.source-detail-content :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  display: block;
+  margin: 10px 0;
+}
+
+.source-detail-content :deep(a) {
+  color: #2563eb;
 }
 
 .source-footer {
@@ -1765,7 +1929,6 @@ onMounted(refreshAll);
 }
 
 @media (max-width: 768px) {
-  .source-filters,
   .chat-controls,
   .ask-box {
     grid-template-columns: 1fr;
