@@ -3,8 +3,9 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 # 先装依赖（利用 Docker 缓存层）
+# 国内服务器必须用 npm 镜像源，否则拉依赖超时/失败
 COPY package*.json ./
-RUN npm install
+RUN npm config set registry https://registry.npmmirror.com && npm install
 
 # 再拷贝源码构建（.env.production 决定 API 地址）
 COPY . .

@@ -4,7 +4,7 @@ import { reactive } from "vue";
 import {useAuthStore} from "@/stores/auth.js"
 import { useRoute } from "vue-router";
 import router from "@/router";
-import authhttp from "@/api/authhttp";
+import authhttp from "@/api/authHttp";
 import { ElMessage  } from 'element-plus'
 
 
